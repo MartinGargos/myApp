@@ -1,36 +1,36 @@
-stages:                                                         # Definuje fáze pipeline
-  - build                                                       # 1. fáze: build
-  - test                                                        # 2. fáze: test
-  - tag                                                         # 3. fáze: tag
+name: CI - Build & Tag Docker
 
-variables:                                                      # Proměnné pro celý pipeline
-  IMAGE_NAME: "myApp"                                           # Název docker obrazu
+on:
+  push:
+    branches: [ main ]
 
-build:                                                          # Job: build
-  stage: build                                                  # Patří do fáze build
-  script:                                                       # Co se má spustit
-    - BUILD_ID=$CI_PIPELINE_ID                                  # Vezme ID pipeline jako tag
-    - docker build -t $IMAGE_NAME:$BUILD_ID .                   # Postaví docker obraz
-    - echo "Postaveno: $IMAGE_NAME:$BUILD_ID"                   # Vypíše info
-  only:                                                         # Spustí se jen na
-    - branches                                                  # větvích (ne na MR)
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-test:                                                           # Job: test
-  stage: test                                                   # Patří do fáze test
-  script:                                                       # Simulace testů
-    - echo "Testuji aplikaci..."                                # Vypíše
-    - sleep 1                                                   # Počká 1 sekundu
-    - echo "Testy PROŠLY"                                       # Vypíše úspěch
-  only:
-    - branches
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-create_tag:                                                     # Job: vytvoření tagu
-  stage: tag                                                    # Poslední fáze
-  script:                                                       # Co se má spustit
-    - BUILD_ID=$CI_PIPELINE_ID                                  # ID pipeline = tag
-    - git tag myApp/$BUILD_ID                                   # Vytvoří git tag: myApp/123
-    - git push origin myApp/$BUILD_ID                           # Pushne tag na GitLab
-  only:
-    - branches                                                  # Jen na větvích
-  when: on_success                                              # Jen když předchozí joby projdou
-                                                             # Konec zápisu
+      - name: Generate tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: myApp
+          tags: |
+            type=raw,value=${{ github.run_id }}
+
+      - name: Build Docker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Create Git tag
+        run: |
+          BUILD_ID=${{ github.run_id }}
+          git tag myApp/$BUILD_ID
+          git push origin myApp/$BUILD_ID
