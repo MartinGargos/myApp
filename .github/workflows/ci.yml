@@ -30,7 +30,10 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
 
       - name: Create Git tag
-        run: |
-          BUILD_ID=${{ github.run_id }}
-          git tag myApp/$BUILD_ID
-          git push origin myApp/$BUILD_ID
+                env:
+                  GH_PAT: ${{ secrets.GH_PAT }}
+                run: |
+                  BUILD_ID=${{ github.run_id }}
+                  git tag myApp/$BUILD_ID
+                  git remote set-url origin https://x-access-token:$GH_PAT@github.com/${{ github.repository }}.git
+                  git push origin myApp/$BUILD_ID
