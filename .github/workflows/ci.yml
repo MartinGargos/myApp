@@ -4,9 +4,9 @@ on:
   push:
     branches: [ main ]
 
-# Přidáváme práva pro GITHUB_TOKEN (klíč k úspěchu!)
+
 permissions:
-  contents: write   # ← Umožní push tagů
+  contents: write
 
 jobs:
   build:
